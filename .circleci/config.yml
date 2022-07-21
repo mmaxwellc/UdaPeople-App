@@ -141,10 +141,7 @@ jobs:
       - image: amazon/aws-cli
     steps:
       - checkout
-      - run:
-          name: Install Tar since its a requesite 
-          command: |
-            yum -y install tar gzip jq git
+      
       - run:
           name: Ensure back-end infrastructure exists
           command: |
@@ -231,7 +228,7 @@ jobs:
           command: |
             sudo apt update
             sudo apt install -y awscli
-       - run:
+      - run:
           name: Run migrations
           no_output_timeout: 20m
           working_directory: ./backend
@@ -253,7 +250,7 @@ jobs:
             cat migration.log
             migration_succesful=$(cat migration.log | grep -c "has been executed successfully")
             if [ $migration_succesful > 0 ]; then exit 0; else exit 1; fi;
-
+     
       - revert-migrations
       - destroy-environment
 
