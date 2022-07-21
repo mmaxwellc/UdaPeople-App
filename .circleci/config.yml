@@ -4,41 +4,37 @@ commands:
   destroy-environment:
     description: Destroy back-end and front-end cloudformation stacks given a workflow ID.
     parameters:
-      # Add parameter here   
+      workflow_id:
+        type: string
     steps:
-      - run:
-          name: Delete S3 content
-          when: on_fail
-          command: |
-            aws s3 rm s3://udapeople-${CIRCLE_WORKFLOW_ID} --recursive
-            exit 0
       - run:
           name: Destroy environments
           when: on_fail
           command: |
-            aws cloudformation delete-stack --stack-name udapeople-backend-${CIRCLE_WORKFLOW_ID}
-            aws cloudformation delete-stack --stack-name udapeople-frontend-${CIRCLE_WORKFLOW_ID}
-            exit 0
+            if aws s3 ls | grep udapeople-<<parameters.workflow_id>>; then
+              aws s3 rm s3://udapeople-<<parameters.workflow_id>> --recursive
+            fi
+            aws cloudformation delete-stack --stack-name frontend-<<parameters.workflow_id>>
+            aws cloudformation delete-stack --stack-name backend-<<parameters.workflow_id>>
+      - revert-migrations:
+          workflow_id: <<parameters.workflow_id>>
+
   revert-migrations:
     description: Revert the last migration if successfully run in the current workflow.
+    parameters:
+      workflow_id:
+        type: string
     steps:
-      - restore_cache:
-          key: backend-build
-          
       - run:
           name: Revert migrations
           when: on_fail
           command: |
-            # store result in SUCCESS if there was a successful migration associated with the workflow id
-            SUCCESS=`curl -H "token: 76f9514c-4cdd-4658-88f9-d7a705af6604" --request GET https://api.memstash.io/values/migration_${CIRCLE_WORKFLOW_ID:0:7}`
-            echo $SUCCESS
-            if [[ $SUCCESS == 1 ]];
-            then
-              cd ~/project/backend
-              npm install
-              npm run migrations:revert #revert the successful migration
+            status=$(curl -H "token: <<parameters.workflow_id>>" \
+              --request GET https://api.memstash.io/values/migration-<<parameters.workflow_id>>)
+            echo $status
+            if [[ "${status}" == 1 ]]; then
+              npm run migrations:revert
             fi
-            
 jobs:
   build-frontend:
     docker:
@@ -184,6 +180,7 @@ jobs:
             - inventory.txt
       # This command has a when: on_fail
       - destroy-environment:
+          workflow_id: "${CIRCLE_WORKFLOW_ID}"
 
   configure-infrastructure:
     docker:
