@@ -141,7 +141,10 @@ jobs:
       - image: amazon/aws-cli
     steps:
       - checkout
-      
+      - run:
+          name: Install Tar since its a requesite 
+          command: |
+            yum -y install tar gzip jq git 
       - run:
           name: Ensure back-end infrastructure exists
           command: |
@@ -171,10 +174,6 @@ jobs:
           paths:
             - project/.circleci/ansible/inventory.txt
       
-      - persist_to_workspace:
-          root: .circleci/ansible
-          paths:
-            - inventory.txt
       # This command has a when: on_fail
       - destroy-environment:
           workflow_id: "${CIRCLE_WORKFLOW_ID}"
